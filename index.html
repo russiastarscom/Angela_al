@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angela AI - DeepSeek Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #e5e7eb;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        /* Градиентные акценты */
+        .gradient-accent {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Сайдбар */
+        .sidebar {
+            background: #111111;
+            border-right: 1px solid #1f2937;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-item:hover {
+            background: #1f2937;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .sidebar-item.active {
+            background: #1f2937;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        /* Основная область чата */
+        .chat-container {
+            background: #0a0a0a;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Сообщения */
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        
+        .user-message {
+            background: #1e293b;
+            border-radius: 18px 18px 4px 18px;
+        }
+        
+        .ai-message {
+            background: #111111;
+            border: 1px solid #1f2937;
+            border-radius: 18px 18px 18px 4px;
+        }
+        
+        /* Поле ввода */
+        .input-container {
+            background: #111111;
+            border-top: 1px solid #1f2937;
+        }
+        
+        .input-field {
+            background: #1e293b;
+            border: 1px solid #374151;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Кнопки */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Индикатор печати */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        /* Скроллбар */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                height: 100vh;
+                z-index: 50;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .chat-container {
+                margin-left: 0;
+            }
+        }
+        
+        /* Модальное окно настроек */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #111111;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen">
+        <!-- Левый сайдбар -->
+        <aside class="sidebar w-64 p-4 flex flex-col" id="sidebar">
+            <div class="mb-6">
+                <button onclick="newChat()" class="btn-primary w-full py-3 px-4 rounded-lg flex items-center justify-center space-x-2">
+                    <i class="fas fa-plus"></i>
+                    <span>Новый чат</span>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <div class="relative">
+                    <input type="text" placeholder="Поиск чатов..." class="w-full bg-gray-800 text-gray-300 px-4 py-2 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-500"></i>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <h3 class="text-sm font-semibold text-gray-500 mb-2">Сегодня</h3>
+                <div id="todayChats" class="space-y-1 mb-4"></div>
+                
+                <h3 class="text-sm font-semibold text-gray-500 mb-2">Ранее</h3>
+                <div id="previousChats" class="space-y-1"></div>
+            </div>
+            
+            <div class="mt-auto pt-4 border-t border-gray-800">
+                <button onclick="openSettings()" class="sidebar-item w-full text-left py-3 px-4 rounded-lg flex items-center space-x-3">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки</span>
+                </button>
+                <button class="sidebar-item w-full text-left py-3 px-4 rounded-lg flex items-center space-x-3">
+                    <i class="fas fa-info-circle"></i>
+                    <span>О программе</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Основная область чата -->
+        <main class="chat-container flex-1 flex flex-col">
+            <!-- Верхняя панель -->
+            <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 gradient-accent rounded-full flex items-center justify-center">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-semibold">Angela AI</h1>
+                            <p class="text-sm text-gray-500">DeepSeek R1</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Область сообщений -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+                <!-- Приветственное сообщение -->
+                <div class="text-center py-12">
+                    <div class="w-32 h-32 mx-auto mb-6 gradient-accent rounded-full flex items-center justify-center">
+                        <i class="fas fa-comments text-white text-5xl"></i>
+                    </div>
+                    <h2 class="text-4xl font-bold mb-4 gradient-text">Привет, я Angela! 👋</h2>
+                    <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+                        Я здесь, чтобы помочь вам с любыми вопросами. Просто напишите мне, и я постараюсь дать лучший ответ!
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Область ввода -->
+            <div class="input-container p-4">
+                <form id="chatForm" class="flex items-end space-x-3">
+                    <div class="flex-1 relative">
+                        <textarea 
+                            id="messageInput"
+                            placeholder="Напишите сообщение Angela..."
+                            class="input-field w-full px-5 py-4 rounded-2xl resize-none focus:outline-none text-lg placeholder-gray-500 pr-12"
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                        ></textarea>
+                        <div class="absolute right-3 bottom-3 flex space-x-2">
+                            <button type="button" class="p-2 text-gray-500 hover:text-blue-500 transition-colors">
+                                <i class="fas fa-paperclip text-xl"></i>
+                            </button>
+                            <button type="button" class="p-2 text-gray-500 hover:text-blue-500 transition-colors">
+                                <i class="fas fa-smile text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button 
+                        type="submit"
+                        id="sendButton"
+                        class="btn-primary px-6 py-4 rounded-2xl flex items-center justify-center"
+                    >
+                        <i class="fas fa-paper-plane text-xl"></i>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Модальное окно настроек -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold">Настройки</h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Модель</h3>
+                    <select class="w-full bg-gray-800 text-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>DeepSeek R1</option>
+                        <option>GPT-4</option>
+                        <option>Claude 3</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Тема</h3>
+                    <div class="flex space-x-3">
+                        <button class="flex-1 py-3 px-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-moon mr-2"></i>Темная
+                        </button>
+                        <button class="flex-1 py-3 px-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-sun mr-2"></i>Светлая
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Язык</h3>
+                    <select class="w-full bg-gray-800 text-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Русский</option>
+                        <option>English</option>
+                        <option>中文</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Дополнительно</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" class="w-5 h-5 text-blue-500 rounded focus:ring-blue-500">
+                            <span>Сохранять историю чатов</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" class="w-5 h-5 text-blue-500 rounded focus:ring-blue-500">
+                            <span>Звуковые уведомления</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" class="w-5 h-5 text-blue-500 rounded focus:ring-blue-500">
+                            <span>Автоматическая прокрутка</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Зашифрованный API ключ
+        const encryptedApiKey = 'c2stb3ItdjEtYjkyZWIxYjFlZWU4ZDc0OTljNTdkNWQwMTAxOTg2OWJkODMyYWRjOGNiMmI0OTNjZTg5NTU4Y2ZjMmJiNjg1Zg==';
+        
+        // Декодирование API ключа
+        function decryptApiKey() {
+            return atob(encryptedApiKey);
+        }
+        
+        // История сообщений и чатов
+        let currentChatId = null;
+        let chats = JSON.parse(localStorage.getItem('angelaChats')) || {};
+        let messages = [];
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChatList();
+            
+            // Если есть чаты, загрузить последний
+            const chatIds = Object.keys(chats);
+            if (chatIds.length > 0) {
+                loadChat(chatIds[chatIds.length - 1]);
+            }
+        });
+        
+        // Загрузка списка чатов
+        function loadChatList() {
+            const todayContainer = document.getElementById('todayChats');
+            const previousContainer = document.getElementById('previousChats');
+            
+            todayContainer.innerHTML = '';
+            previousContainer.innerHTML = '';
+            
+            const today = new Date().toDateString();
+            
+            Object.entries(chats).forEach(([id, chat]) => {
+                const chatDate = new Date(chat.createdAt).toDateString();
+                const isToday = chatDate === today;
+                
+                const chatElement = document.createElement('div');
+                chatElement.className = `sidebar-item p-3 rounded-lg cursor-pointer ${currentChatId === id ? 'active' : ''}`;
+                chatElement.onclick = () => loadChat(id);
+                
+                chatElement.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h4 class="font-medium truncate">${chat.title || 'Новый чат'}</h4>
+                            <p class="text-sm text-gray-500 truncate">${chat.lastMessage || 'Начните диалог'}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-500"></i>
+                    </div>
+                `;
+                
+                if (isToday) {
+                    todayContainer.appendChild(chatElement);
+                } else {
+                    previousContainer.appendChild(chatElement);
+                }
+            });
+        }
+        
+        // Создание нового чата
+        function newChat() {
+            currentChatId = Date.now().toString();
+            messages = [];
+            
+            chats[currentChatId] = {
+                id: currentChatId,
+                title: 'Новый чат',
+                createdAt: new Date().toISOString(),
+                lastMessage: '',
+                messages: []
+            };
+            
+            saveChats();
+            loadChatList();
+            clearMessages();
+            
+            // Показать приветственное сообщение
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="w-32 h-32 mx-auto mb-6 gradient-accent rounded-full flex items-center justify-center">
+                        <i class="fas fa-comments text-white text-5xl"></i>
+                    </div>
+                    <h2 class="text-4xl font-bold mb-4 gradient-text">Привет, я Angela! 👋</h2>
+                    <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+                        Я здесь, чтобы помочь вам с любыми вопросами. Просто напишите мне, и я постараюсь дать лучший ответ!
+                    </p>
+                </div>
+            `;
+        }
+        
+        // Загрузка чата
+        function loadChat(chatId) {
+            currentChatId = chatId;
+            const chat = chats[chatId];
+            
+            if (chat) {
+                messages = chat.messages || [];
+                renderMessages();
+                loadChatList();
+            }
+        }
+        
+        // Сохранение чатов
+        function saveChats() {
+            if (currentChatId && chats[currentChatId]) {
+                chats[currentChatId].messages = messages;
+                localStorage.setItem('angelaChats', JSON.stringify(chats));
+            }
+        }
+        
+        // Очистка сообщений
+        function clearMessages() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = '';
+        }
+        
+        // Отрисовка сообщений
+        function renderMessages() {
+            clearMessages();
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            messages.forEach(msg => {
+                addMessageToDOM(msg.content, msg.role, false);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Обработчик отправки формы
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Добавление сообщения пользователя
+            addMessage(message, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Обновление заголовка чата
+            if (chats[currentChatId] && !chats[currentChatId].title) {
+                chats[currentChatId].title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+                loadChatList();
+            }
+            
+            // Показать индикатор загрузки
+            showTypingIndicator();
+            
+            try {
+                // Отправка запроса к API
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${decryptApiKey()}`,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'Angela AI Chat'
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek/deepseek-r1',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'Вы - Angela, дружелюбный и полезный ИИ-ассистент. Отвечайте на русском языке, будьте вежливы, информативны и используйте эмодзи для выражения эмоций.'
+                            },
+                            ...messages.map(msg => ({
+                                role: msg.role === 'user' ? 'user' : 'assistant',
+                                content: msg.content
+                            }))
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка при получении ответа от API');
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                
+                // Удалить индикатор загрузки
+                removeTypingIndicator();
+                
+                // Добавить ответ ИИ
+                addMessage(aiResponse, 'ai');
+                
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('Извините, произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте еще раз. 😔', 'error');
+                console.error('Error:', error);
+            }
+        });
+        
+        // Добавление сообщения в чат
+        function addMessage(content, type) {
+            addMessageToDOM(content, type, true);
+            
+            if (type !== 'error' && currentChatId) {
+                messages.push({ role: type, content: content });
+                
+                // Обновление последнего сообщения
+                if (chats[currentChatId]) {
+                    chats[currentChatId].lastMessage = content;
+                }
+                
+                saveChats();
+                loadChatList();
+            }
+        }
+        
+        // Добавление сообщения в DOM
+        function addMessageToDOM(content, type, animate = true) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            // Удалить приветственное сообщение
+            const welcomeMessage = messagesContainer.querySelector('.text-center.py-12');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} ${animate ? 'fade-in' : ''}`;
+            
+            if (type === 'error') {
+                messageDiv.innerHTML = `
+                    <div class="message-bubble bg-red-900/20 border border-red-800 rounded-2xl p-4">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-exclamation-circle text-red-500 mt-1"></i>
+                            <div class="flex-1">
+                                <p class="text-red-400">${content}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const isUser = type === 'user';
+                messageDiv.innerHTML = `
+                    <div class="message-bubble ${isUser ? 'user-message' : 'ai-message'} p-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-10 h-10 ${isUser ? 'bg-gray-700' : 'gradient-accent'} rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas ${isUser ? 'fa-user' : 'fa-robot'} ${isUser ? 'text-gray-300' : 'text-white'}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="whitespace-pre-wrap text-lg">${escapeHtml(content)}</p>
+                                ${!isUser ? `
+                                    <div class="mt-3 flex space-x-3">
+                                        <button onclick="copyToClipboard('${escapeHtml(content)}')" class="text-sm text-gray-500 hover:text-blue-400 transition-colors">
+                                            <i class="fas fa-copy mr-1"></i>Копировать
+                                        </button>
+                                        <button onclick="likeMessage(this)" class="text-sm text-gray-500 hover:text-pink-400 transition-colors">
+                                            <i class="far fa-heart mr-1"></i>Нравится
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Показать индикатор набора текста
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'flex justify-start fade-in';
+            typingDiv.innerHTML = `
+                <div class="message-bubble ai-message p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 gradient-accent rounded-full flex items-center justify-center">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Удалить индикатор набора текста
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        // Копировать в буфер обмена
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Скопировано в буфер обмена! 📋');
+            });
+        }
+        
+        // Лайкнуть сообщение
+        function likeMessage(button) {
+            button.innerHTML = '<i class="fas fa-heart mr-1"></i>Нравится';
+            button.classList.add('text-pink-500');
+            button.onclick = null;
+            showNotification('Спасибо за отзыв! ❤️');
+        }
+        
+        // Показать уведомление
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-6 right-6 bg-gray-800 text-white px-6 py-3 rounded-2xl shadow-xl z-50 fade-in';
+            notification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(20px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Переключение сайдбара
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+        
+        // Открыть настройки
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        
+        // Закрыть настройки
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        
+        // Обработчик клавиш
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            }
+        }
+        
+        // Автоматическая высота textarea
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+        
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Закрытие модального окна при клике вне его
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSettings();
+            }
+        });
+    </script>
+</body>
+</html>
